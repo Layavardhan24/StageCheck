@@ -79,7 +79,7 @@ def call_agent(ctx, agent, config, input_packet, out):
     binary = canonical(config['binary'])
 
     if provider == 'claude':
-        setting_path = ctx.tool / 'settings/claude.settings.json'
+        setting_path = ctx.tool / 'settings/agent.settings.json'
         settings = loads(ctx.read(setting_path))
         if not settings.get('apiKeyHelper'):
             raise ToolError('owner-selected Claude binary, apiKeyHelper and pinned model ID are required')

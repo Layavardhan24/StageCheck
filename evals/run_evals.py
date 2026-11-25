@@ -597,7 +597,7 @@ def properties(args,out):
     supported_flags='--bare --print --tools --allowedTools --output-format --json-schema --system-prompt-file --settings --model --max-budget-usd --no-session-persistence --disable-slash-commands --strict-mcp-config --mcp-config --setting-sources --permission-mode'
     binary.write_text('#!/usr/bin/env python3\nimport sys\nfrom pathlib import Path\nif "--help" in sys.argv:\n print('+repr(supported_flags)+')\nelse:\n print((Path(__file__).parent/"stub_response.json").read_text())\n')
     binary.chmod(0o755)
-    settings=load(tool/'settings/claude.settings.json');settings['apiKeyHelper']='fixture-helper-not-executed';(tool/'settings/claude.settings.json').write_bytes(encode(settings))
+    settings=load(tool/'settings/agent.settings.json');settings['apiKeyHelper']='fixture-helper-not-executed';(tool/'settings/agent.settings.json').write_bytes(encode(settings))
     config=load(tool/'config/agents.json');config.update(enabled=True,binary=str(binary),budget_usd=0.01,timeout_seconds=5)
     selected=config['agents'][0];selected['model']='fixture-model-not-an-api-id'
     packet={'agent_id':'claim_support','claims':data,'allowed_paths':[str(root)]}

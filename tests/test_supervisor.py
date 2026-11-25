@@ -486,7 +486,7 @@ class TestSupervisorCLI(unittest.TestCase):
             [],
         )
         task_id = load_active_state(self.ws)["task_id"]
-        updated = reset_circuit_breaker(self.ws, task_id, authorized_by="owner@stagecheck.local")
+        updated = reset_circuit_breaker(self.ws, task_id, authorized_by="developer@dharitri.org")
         self.assertEqual(updated["phase"], "PHASE_1_PLANNING")
         self.assertEqual(updated["turn"], "AGENT1_PROMPTING")
         self.assertEqual(updated["cleared_gates"], {})

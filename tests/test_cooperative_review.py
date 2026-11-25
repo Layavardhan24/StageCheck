@@ -267,7 +267,7 @@ class TestCooperativeReview(unittest.TestCase):
             task_id=self.task_id,
             defect_id=waiver_ids[0],
             rationale="Authorized for cooperative pre-commit CLI test",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_coop.txt",
             rule_id=waiver_ids[0],

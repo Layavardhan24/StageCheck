@@ -340,6 +340,27 @@ class TestAtomicScaffolding(unittest.TestCase):
         self.assertIn("MUST NOT resubmit `pre_commit_status.json` with the same cycle number", single_text)
         self.assertIn("MUST NOT use repository path prefixes", single_text)
 
+    def test_owner_grants_email_resolution_from_workspace_path(self) -> None:
+        """Verify OWNER_GRANTS.md resolves [user]@dharitri.org from workspace path or defaults to developer@dharitri.org."""
+        from governance.core.scaffold import resolve_owner_email, render_default_owner_grants_md
+
+        # 1. Path under /home/{user}/...
+        home_user_ws = Path("/home/laya/Development/StageCheck-Tool")
+        self.assertEqual(resolve_owner_email(home_user_ws), "laya@dharitri.org")
+
+        alice_ws = Path("/home/alice/projects/service")
+        self.assertEqual(resolve_owner_email(alice_ws), "alice@dharitri.org")
+
+        # 2. Path outside /home (e.g. /tmp/...)
+        tmp_ws = Path("/tmp/scratch/workspace")
+        self.assertEqual(resolve_owner_email(tmp_ws), "developer@dharitri.org")
+
+        # 3. Rendered content contains resolved email and default fallback, and no owner@stagecheck.local
+        rendered = render_default_owner_grants_md(home_user_ws)
+        self.assertIn("laya@dharitri.org", rendered)
+        self.assertIn("developer@dharitri.org", rendered)
+        self.assertNotIn("owner@stagecheck.local", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

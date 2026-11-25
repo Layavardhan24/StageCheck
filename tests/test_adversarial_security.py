@@ -371,7 +371,7 @@ class TestAdversarialSecurity(unittest.TestCase):
 
         # Attempting reset beyond maximum attempt budget must strictly fail closed
         with self.assertRaises(AttemptBudgetExhaustedError):
-            reset_circuit_breaker(self.ws, "task-adv-01", authorized_by="owner@stagecheck.local")
+            reset_circuit_breaker(self.ws, "task-adv-01", authorized_by="developer@dharitri.org")
 
     # =========================================================================
     # 8. Premature CLI Operations Defenses
@@ -860,7 +860,7 @@ class TestAdversarialSecurity(unittest.TestCase):
             task_id="task-adv-01",
             defect_id="sec.test_waiver",
             rationale="Verified temporary waiver",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=1,
             evidence_path="evidence/waiver_b6.txt",
             rule_id="SECRETS-001",
@@ -923,7 +923,7 @@ class TestAdversarialSecurity(unittest.TestCase):
             reset_circuit_breaker(
                 self.ws,
                 "task-adv-01",
-                authorized_by="owner@stagecheck.local",
+                authorized_by="developer@dharitri.org",
                 require_tty=True,
                 confirmed=False,
             )

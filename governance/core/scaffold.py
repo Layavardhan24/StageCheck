@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -38,7 +39,36 @@ class ScaffoldingRollbackError(ScaffoldingError):
 
 
 # Default content for Markdown control files
-DEFAULT_OWNER_GRANTS_MD = """# Human Owner Authorization Grants & Privileged Commands
+DEFAULT_OWNER_EMAIL = "developer@dharitri.org"
+
+
+def resolve_owner_email(workspace_root: Optional[Path | str] = None) -> str:
+    """Resolve human owner email from workspace path (/home/{user}/...) or fallback to developer@dharitri.org."""
+    if workspace_root is not None:
+        try:
+            parts = Path(workspace_root).resolve().parts
+            if len(parts) >= 3 and parts[1] == "home" and parts[2]:
+                user_slug = re.sub(r"[^a-zA-Z0-9._-]", "", parts[2]).strip().lower()
+                if user_slug and user_slug not in ("root", "none", "unknown"):
+                    return f"{user_slug}@dharitri.org"
+        except Exception:
+            pass
+
+    return DEFAULT_OWNER_EMAIL
+
+
+def render_default_owner_grants_md(workspace_root: Optional[Path | str] = None) -> str:
+    """Render default OWNER_GRANTS.md with resolved owner email and developer fallback."""
+    owner_email = resolve_owner_email(workspace_root)
+    lines = [
+        f"* Authorized owner: `{owner_email}` (roles: OWNER; permissions: WAIVER_APPROVE, WAIVER_REVOKE, GATE_OVERRIDE, CIRCUIT_BREAKER_RESET)"
+    ]
+    if owner_email != DEFAULT_OWNER_EMAIL:
+        lines.append(
+            f"* Authorized owner: `{DEFAULT_OWNER_EMAIL}` (roles: OWNER; permissions: WAIVER_APPROVE, WAIVER_REVOKE, GATE_OVERRIDE, CIRCUIT_BREAKER_RESET)"
+        )
+    identities_block = "\n".join(lines)
+    return f"""# Human Owner Authorization Grants & Privileged Commands
 
 This document records explicit, human-authorized exemptions, privileged commands,
 and security waivers. AI agents have strictly zero authority to modify this file.
@@ -48,8 +78,11 @@ and security waivers. AI agents have strictly zero authority to modify this file
 * Direct remote push commands (git push) are strictly forbidden for AI agents.
 
 ## Privileged Operator Identities
-* Authorized owner: `owner@stagecheck.local` (roles: OWNER; permissions: WAIVER_APPROVE, WAIVER_REVOKE, GATE_OVERRIDE, CIRCUIT_BREAKER_RESET)
+{identities_block}
 """
+
+
+DEFAULT_OWNER_GRANTS_MD = render_default_owner_grants_md(None)
 
 DEFAULT_FAILURE_PREVENTION_MD = """# Failure Prevention, Historical Defect Patterns & Anti-Regressions
 
@@ -546,6 +579,7 @@ def build_control_descriptors(
     qualification_root: str = "evals",
     agent1_name: str = "agent1",
     agent2_name: str = "agent2",
+    workspace_root: Optional[Path | str] = None,
 ) -> Dict[str, str]:
     """Generate the formatted string content for all 8 mandatory control files.
 
@@ -628,13 +662,15 @@ def build_control_descriptors(
         "dispositions": [],
     }
 
+    owner_grants_content = render_default_owner_grants_md(workspace_root)
+
     return {
         "STAGECHECK_ROOT.json": deterministic_json_dumps(stagecheck_root_content),
         "EVIDENCE_ROOT.json": deterministic_json_dumps(evidence_root_content),
         "PRODUCT_REPOSITORIES.json": deterministic_json_dumps(repo_registry_content),
         "QUALIFICATION_ROOT.json": deterministic_json_dumps(qualification_root_content),
         "ACTIVE_STATE.json": deterministic_json_dumps(active_state_content),
-        "OWNER_GRANTS.md": DEFAULT_OWNER_GRANTS_MD,
+        "OWNER_GRANTS.md": owner_grants_content,
         "FAILURE_PREVENTION.md": DEFAULT_FAILURE_PREVENTION_MD,
         "DISPOSITIONS.json": deterministic_json_dumps(dispositions_content),
     }
@@ -666,6 +702,7 @@ def reconcile_controls(
         stagecheck_root=stagecheck_root,
         agent1_name=agent1_name,
         agent2_name=agent2_name,
+        workspace_root=root,
     )
 
     reconciled_paths: Dict[str, Path] = {}
@@ -726,6 +763,7 @@ def scaffold_controls_atomic(
         stagecheck_root=stagecheck_root,
         agent1_name=agent1_name,
         agent2_name=agent2_name,
+        workspace_root=root,
     )
 
     # Staging directory for atomic transaction

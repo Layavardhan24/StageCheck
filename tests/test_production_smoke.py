@@ -183,7 +183,7 @@ class TestProductionSmoke(unittest.TestCase):
             task_id="task-101",
             defect_id=waiver_ids[0],
             rationale="Authorized for production smoke test",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=1,
             evidence_path="evidence/waiver_smoke.txt",
             rule_id=waiver_ids[0],

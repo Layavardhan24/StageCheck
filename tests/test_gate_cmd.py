@@ -239,7 +239,7 @@ class TestGateCLIAndPrerequisites(unittest.TestCase):
             task_id=self.task_id,
             defect_id=waiver_ids[0],
             rationale="Authorized for gate fail-closed test",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_gate.txt",
             rule_id=waiver_ids[0],

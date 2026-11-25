@@ -153,7 +153,7 @@ class TestPrettyJSONFormatting(unittest.TestCase):
         state_file = self.workspace / "controls" / "ACTIVE_STATE.json"
         self.assert_pretty_json_file(state_file)
 
-        reset_circuit_breaker(self.workspace, "task-cb", "owner@stagecheck.local")
+        reset_circuit_breaker(self.workspace, "task-cb", "developer@dharitri.org")
         elevate_permissions_for_teardown(self.workspace)
         self.assert_pretty_json_file(state_file)
 
@@ -171,7 +171,7 @@ class TestPrettyJSONFormatting(unittest.TestCase):
             task_id="task-init",
             defect_id="sec.gitleaks",
             rationale="Test waiver",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             evidence_path="evidence/waiver_proof.txt",
             confirmed=True,
         )

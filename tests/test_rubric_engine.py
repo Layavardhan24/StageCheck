@@ -235,7 +235,7 @@ class TestRubricEngine(unittest.TestCase):
             task_id=self.task_id,
             defect_id=waiver_ids[0],
             rationale="Explicit operator authorization for test workspace",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_evidence.txt",
             rule_id=waiver_ids[0],
@@ -734,7 +734,7 @@ class TestRubricEngine(unittest.TestCase):
             task_id=self.task_id,
             defect_id="COMMON-001",
             rationale="Operator approved waiver with verified provenance",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_active.txt",
             rule_id="COMMON-001",
@@ -1289,7 +1289,7 @@ class TestRubricEngine(unittest.TestCase):
             rule_id="UPSTREAM_REUSE-001",
             waived_rules=["UPSTREAM_REUSE-001"],
             rationale="Temporary unpinned range approved by owner.",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             evidence_path="evidence/waiver_upstream.txt",
         )
         record_waiver_in_replay_ledger(self.workspace, entry)

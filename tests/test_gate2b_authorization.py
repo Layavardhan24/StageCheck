@@ -203,7 +203,7 @@ class TestGate2BAuthorization(unittest.TestCase):
             task_id=self.task_id,
             defect_id=waiver_ids[0],
             rationale="Authorized for Gate-2B pre-commit rubric test",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_g2b.txt",
             rule_id=waiver_ids[0],

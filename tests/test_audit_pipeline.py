@@ -124,7 +124,7 @@ class TestAuditPipeline(unittest.TestCase):
             task_id=self.task_id,
             defect_id=waiver_ids[0],
             rationale="Authorized for audit pipeline verification",
-            authorized_by="owner@stagecheck.local",
+            authorized_by="developer@dharitri.org",
             attempt=self.attempt,
             evidence_path="evidence/waiver_audit.txt",
             rule_id=waiver_ids[0],

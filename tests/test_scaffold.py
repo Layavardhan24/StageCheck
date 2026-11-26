@@ -323,6 +323,7 @@ class TestAtomicScaffolding(unittest.TestCase):
         self.assertIn("MUST NOT use repository path prefixes", a2_text)
         self.assertIn("Continuous Lifecycle & Mandatory Waiting States", a2_text)
         self.assertIn("Do NOT terminate after Phase 2B", a2_text)
+        self.assertIn("`claims.json` and `report.md` schema 3 to 4 times", a2_text)
 
         # Single-agent instruction checks
         single_paths = scaffold_agent_instructions(
@@ -339,6 +340,7 @@ class TestAtomicScaffolding(unittest.TestCase):
         self.assertIn("MUST NOT demand or check for Phase-2B deliverables", single_text)
         self.assertIn("MUST NOT resubmit `pre_commit_status.json` with the same cycle number", single_text)
         self.assertIn("MUST NOT use repository path prefixes", single_text)
+        self.assertIn("`claims.json` and `report.md` schema 3 to 4 times", single_text)
 
     def test_owner_grants_email_resolution_from_workspace_path(self) -> None:
         """Verify OWNER_GRANTS.md resolves [user]@dharitri.org from workspace path or defaults to developer@dharitri.org."""

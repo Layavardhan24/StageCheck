@@ -221,6 +221,7 @@ Implement source code, unit tests, and regression coverage for approved tasks on
      - Repeat until `Phase-2A/pre_commit_review.json` reports `"status": "APPROVED"`.
   5. *Strict Phase 2A Completion Requirement:* DO NOT generate `Phase-2B/claims.json`, `Phase-2B/report.md`, or any other files in `Phase-2B/` without completing Phase 2A first. Phase 2A is completed ONLY when `Phase-2A/pre_commit_review.json` reports `"status": "APPROVED"` and StageCheck advances the active phase to `PHASE_2B_COMMITTING`. Generating Phase-2B deliverables before Phase 2A approval is strictly prohibited and violates governance lifecycle ordering.
   6. *Phase 2B Delivery & Structured Commit Protocol:* Once `phase == "PHASE_2B_COMMITTING"`, commit locally on the dedicated sprint branch and deliver BOTH `evidence/tasks/<task_id>/attempt_<N>/Phase-2B/report.md` AND `evidence/tasks/<task_id>/attempt_<N>/Phase-2B/claims.json` so StageCheck can advance Gate-2B to Phase 3.
+     - **Mandatory Schema Pre-Check:** Check the `claims.json` and `report.md` schema 3 to 4 times before generating them to ensure complete schema compliance and prevent verification failure.
      - **Commit Timing:** Commits occur strictly in Phase 2B after Phase 2A review approval.
      - **Forward-Only Attempt Repair Model:** History rewriting (`git commit --amend`, `git reset`, `git rebase`) is strictly prohibited. If an attempt fails Phase-3 audit and a repair attempt begins (Attempt 2+), produce forward-only fix commits building directly upon prior attempts.
      - **Structured Commit Message Format:**
@@ -238,6 +239,7 @@ Implement source code, unit tests, and regression coverage for approved tasks on
   8. *Termination Condition:* Terminate ONLY when `controls/ACTIVE_STATE.json` reaches `COMPLETED` and `stagecheck plan next` confirms that all roadmap tasks have completed and sealed.
 
 ## Phase-2B Deliverable Contracts & Citation Standards
+- **Mandatory Schema Pre-Check:** Check the `claims.json` and `report.md` schema 3 to 4 times before generating them. Verify all required properties, line brackets, and sha256 hashes against `schemas/claims.schema.json` and report requirements.
 - **`Phase-2B/report.md`:** Must document the implementation summary, blast radius analysis, tests executed, and commit hashes.
 - **`Phase-2B/claims.json`:** Must strictly conform to `claims.schema.json` with exact property names:
   ```json
@@ -325,6 +327,7 @@ Implement source code, unit tests, and regression coverage for approved tasks on
 - MUST NOT resubmit `pre_commit_status.json` with the same `cycle` number following a `REVISION_REQUIRED` review. You MUST increment `cycle` (`cycle > rev_cycle`).
 - MUST NOT use repository path prefixes (such as `"repos/<repo_name>"`) in `pre_commit_status.json`; use bare repository names matching `controls/PRODUCT_REPOSITORIES.json`.
 - MUST NOT generate `Phase-2B/claims.json`, `Phase-2B/report.md`, or any other files in `Phase-2B/` without completing Phase 2A first (`Phase-2A/pre_commit_review.json` status must be `"APPROVED"` and active phase advanced to `PHASE_2B_COMMITTING`).
+- MUST NOT generate `Phase-2B/claims.json` or `Phase-2B/report.md` without checking the `claims.json` and `report.md` schema 3 to 4 times before generating them.
 - MUST NOT cite non-test commands (such as `git rev-parse`, `git status`, `git branch`) as executable `type: "command"` citations in `Phase-2B/claims.json`. Repository metadata witness records must be cited as `type: "file"`.
 - MUST NOT omit required fields (`stdout_sha256`, `stderr_sha256`, `record_sha256`, `exit_status`, `argv`, `cwd`) in `type: "command"` citations in `Phase-2B/claims.json`.
 - MUST NOT execute remote push operations (`git push` is strictly forbidden).
@@ -409,6 +412,7 @@ def scaffold_agent_instructions(
                 f"- Strict Phase 2A Completion Requirement: DO NOT generate `Phase-2B/claims.json`, `Phase-2B/report.md`, or any other files in `Phase-2B/` without completing Phase 2A first (`Phase-2A/pre_commit_review.json` status must be `\"APPROVED\"` and active phase advanced to `PHASE_2B_COMMITTING`).\n"
                 f"- Do NOT terminate after Phase 2B: Enter waiting state while StageCheck runs Phase 3 audit and Gate 4 sealing, and wait for the next roadmap task to reach Phase 2A.\n\n"
                 f"### Phase-2B Deliverable Contracts & Citation Standards\n"
+                f"- Check the `claims.json` and `report.md` schema 3 to 4 times before generating them to ensure complete schema compliance.\n"
                 f"- Deliver both `Phase-2B/report.md` and `Phase-2B/claims.json` strictly conforming to `claims.schema.json`.\n"
                 f"- Root fields `task_id`, `iteration`, `contract_sha256`, `record`, `record_sha256`, and `claims` are mandatory.\n"
                 f"- In each claim, `id`, `kind`, `text`, `scope`, `label`, `citations`, and `blast_radius` are mandatory.\n"
@@ -424,6 +428,7 @@ def scaffold_agent_instructions(
                 f"- MUST NOT resubmit `pre_commit_status.json` with the same cycle number following `REVISION_REQUIRED` (`cycle > rev_cycle` is mandatory for turn advancement).\n"
                 f"- MUST NOT use repository path prefixes (such as `repos/<repo_name>`) in `pre_commit_status.json`; use bare repository names matching `controls/PRODUCT_REPOSITORIES.json`.\n"
                 f"- MUST NOT generate `Phase-2B/claims.json`, `Phase-2B/report.md`, or any other files in `Phase-2B/` without completing Phase 2A first.\n"
+                f"- MUST NOT generate `Phase-2B/claims.json` or `Phase-2B/report.md` without checking the `claims.json` and `report.md` schema 3 to 4 times before generating them.\n"
                 f"- MUST NOT cite non-test commands (such as `git rev-parse`, `git status`) as executable `type: \"command\"` citations in `Phase-2B/claims.json`. Repository witness records must be cited as `type: \"file\"`.\n"
                 f"- MUST NOT omit required fields (`stdout_sha256`, `stderr_sha256`, `record_sha256`, `exit_status`, `argv`, `cwd`) in `type: \"command\"` citations.\n"
                 f"- MUST NOT execute remote push operations (`git push` is strictly forbidden).\n"

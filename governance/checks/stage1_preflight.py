@@ -38,7 +38,17 @@ def run_stage1_preflight(ctx: AuditContext) -> StageResult:
 
     # 2. Assert AGENTS.md contract existence and cryptographic binding
     agents_md = ctx.workspace_root / "AGENTS.md"
-    if not agents_md.is_file():
+    if agents_md.is_symlink():
+        defects.append(
+            Defect(
+                defect_id="preflight.agents_contract_symlink",
+                message=f"Root AGENTS.md contract is an insecure symbolic link: '{agents_md}'.",
+                stage=stage_id,
+                severity="CRITICAL",
+                blocking=True,
+            )
+        )
+    elif not agents_md.is_file():
         defects.append(
             Defect(
                 defect_id="preflight.missing_agents_contract",
@@ -49,8 +59,20 @@ def run_stage1_preflight(ctx: AuditContext) -> StageResult:
             )
         )
     else:
-        agents_res = verify_agents_contract(ctx.workspace_root)
-        if not agents_res.get("valid", False):
+        try:
+            agents_res = verify_agents_contract(ctx.workspace_root)
+        except Exception as err:
+            defects.append(
+                Defect(
+                    defect_id="preflight.invalid_agents_contract",
+                    message=f"Root AGENTS.md contract verification security error: {err}",
+                    stage=stage_id,
+                    severity="CRITICAL",
+                    blocking=True,
+                )
+            )
+            agents_res = {"valid": False}
+        if not agents_res.get("valid", False) and not any(d.defect_id == "preflight.invalid_agents_contract" for d in defects):
             mismatches = [m["control"] for m in agents_res.get("mismatches", [])]
             missing_ctrls = agents_res.get("missing", [])
             detail = []

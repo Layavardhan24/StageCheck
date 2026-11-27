@@ -32,7 +32,13 @@ from governance.core.git import (
     get_repo_remote_push_urls,
 )
 from governance.core.locking import acquire_runtime_lock
-from governance.core.paths import StageCheckPathError, safe_resolve, sha256_file_nofollow, validate_task_id
+from governance.core.paths import (
+    StageCheckPathError,
+    safe_resolve,
+    sha256_file_nofollow,
+    validate_task_id,
+    write_text_nofollow,
+)
 from governance.core.permissions import _safe_chmod, freeze_phase_directory
 from governance.core.state import load_active_state, save_active_state
 from governance.core.utils import (
@@ -1449,25 +1455,20 @@ def generate_gate_receipt(
 
 
 def _write_receipt_no_follow(workspace_root: Path, receipt_path: Path, content_str: str) -> None:
-    """Safely write a gate receipt without following symlinks and set mode 0444."""
+    """Safely write a gate receipt without following symlinks and set mode 0444 (SEC-97)."""
+    from governance.core.paths import write_text_nofollow
     rel_receipt = receipt_path.relative_to(workspace_root).as_posix()
     safe_target = safe_resolve(rel_receipt, workspace_root, allow_symlinks=False)
     if safe_target.is_symlink():
         raise GateError(f"Refusing to follow symlinked receipt path '{safe_target}'.")
+    if safe_target.parent.is_dir() and not os.access(safe_target.parent, os.W_OK):
+        _safe_chmod(safe_target.parent, 0o755)
     if safe_target.exists():
         try:
             _safe_chmod(safe_target, 0o644)
         except OSError:
             pass
-    fd = os.open(safe_target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-    try:
-        os.write(fd, content_str.encode("utf-8"))
-    finally:
-        os.close(fd)
-    try:
-        _safe_chmod(safe_target, 0o444)
-    except OSError:
-        pass
+    write_text_nofollow(safe_target, content_str, append=False, mode=0o444)
 
 
 def advance_gate_atomic(
@@ -1649,7 +1650,7 @@ def _advance_gate_atomic_locked(
             )
             journal.record_staged_write(seal_path)
 
-            # Write master task seal at task root certifying the completed task
+            # Write master task seal at task root certifying the completed task (SEC-97)
             master_seal_path = root / "evidence" / "tasks" / resolved_task_id / "seal.json"
             if not master_seal_path.is_symlink():
                 task_dir = master_seal_path.parent
@@ -1657,16 +1658,11 @@ def _advance_gate_atomic_locked(
                     _safe_chmod(task_dir, 0o755)
                 if master_seal_path.exists():
                     _safe_chmod(master_seal_path, 0o644)
-                seal_bytes = (json.dumps(seal_record, indent=2, sort_keys=True) + "\n").encode("utf-8")
-                m_fd = os.open(master_seal_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-                try:
-                    os.write(m_fd, seal_bytes)
-                finally:
-                    os.close(m_fd)
-                _safe_chmod(master_seal_path, 0o444)
+                seal_content = json.dumps(seal_record, indent=2, sort_keys=True) + "\n"
+                write_text_nofollow(master_seal_path, seal_content, append=False, mode=0o444)
                 journal.record_staged_write(master_seal_path)
 
-            # Write Phase-3/seal.json copy for phase-level visibility
+            # Write Phase-3/seal.json copy for phase-level visibility (SEC-97)
             p3_dir = attempt_dir / "Phase-3"
             if p3_dir.is_dir() and not p3_dir.is_symlink():
                 p3_seal_path = p3_dir / "seal.json"
@@ -1675,12 +1671,7 @@ def _advance_gate_atomic_locked(
                         _safe_chmod(p3_dir, 0o755)
                     if p3_seal_path.exists():
                         _safe_chmod(p3_seal_path, 0o644)
-                    p3_fd = os.open(p3_seal_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-                    try:
-                        os.write(p3_fd, seal_bytes)
-                    finally:
-                        os.close(p3_fd)
-                    _safe_chmod(p3_seal_path, 0o444)
+                    write_text_nofollow(p3_seal_path, seal_content, append=False, mode=0o444)
                     journal.record_staged_write(p3_seal_path)
 
             # Index seal downstream in EVIDENCE_MANIFEST.json

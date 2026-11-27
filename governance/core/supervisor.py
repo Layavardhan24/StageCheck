@@ -701,7 +701,7 @@ class SupervisorEngine:
             attempt_dir = resolve_task_attempt_dir(self.root, audit_task, audit_att)
             verdict_file = attempt_dir / "Phase-3" / "verdict.json"
 
-            if post_phase != "PHASE_3_AUDIT" or verdict_file.is_file():
+            if post_phase != "PHASE_3_AUDIT" or (verdict_file.is_file() and not verdict_file.is_symlink()):
                 return self.step(
                     task_id=post_state.get("task_id", audit_task),
                     attempt=int(post_state.get("attempt_index", audit_att)),

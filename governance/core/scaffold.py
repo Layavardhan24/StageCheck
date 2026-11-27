@@ -776,10 +776,10 @@ def scaffold_controls_atomic(
     created_in_controls = False
 
     try:
-        # 1. Write and validate each descriptor in staging
+        # 1. Write and validate each descriptor in staging (SEC-98)
         for filename, content in descriptors.items():
             staged_file = staging_dir / filename
-            staged_file.write_text(content, encoding="utf-8")
+            write_text_nofollow(staged_file, content, append=False, mode=0o644)
 
             # Validate JSON descriptors against their schemas
             if filename.endswith(".json"):

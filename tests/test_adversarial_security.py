@@ -1022,6 +1022,76 @@ class TestAdversarialSecurity(unittest.TestCase):
         self.assertEqual(new_st["task_id"], "task-next-02")
         self.assertNotIn("halt_reason", new_st)
 
+    def test_wave16_sec95_preflight_symlinked_agents_md(self) -> None:
+        """[SEC-95] Stage 1 Preflight cleanly rejects symlinked AGENTS.md as a blocking critical defect."""
+        from governance.checks.base import AuditContext
+        from governance.checks.stage1_preflight import run_stage1_preflight
+
+        agents_md = self.ws / "AGENTS.md"
+        target_file = self.ws / "specs" / "ARCHITECTURE.md"
+        if agents_md.exists():
+            agents_md.unlink()
+        agents_md.symlink_to(target_file)
+
+        ctx = AuditContext(
+            workspace_root=self.ws,
+            task_id="task-adv-01",
+            attempt=1,
+            touched_repos=set(),
+            all_registered_repos={"backend"},
+            base_commits={},
+            target_commits={},
+            declared_scope={},
+            claims={},
+        )
+        res = run_stage1_preflight(ctx)
+        self.assertEqual(res.status, "FAIL")
+        self.assertTrue(any(d.defect_id == "preflight.agents_contract_symlink" for d in res.defects))
+
+        # Restore regular AGENTS.md
+        agents_md.unlink()
+        from governance.core.agents_md import write_agents_contract
+        write_agents_contract(self.ws)
+
+    def test_wave16_sec96_secrets_broken_symlink_override(self) -> None:
+        """[SEC-96] Stage 6 Secret scanning detects dangling symlink Gitleaks overrides."""
+        from governance.checks.base import AuditContext
+        from governance.checks.stage6_secrets import run_stage6_secrets
+
+        repo_dir = self.ws / "repos" / "backend"
+        dangling_symlink = repo_dir / ".gitleaksignore"
+        if dangling_symlink.is_symlink() or dangling_symlink.exists():
+            dangling_symlink.unlink()
+        dangling_symlink.symlink_to(Path("/tmp/nonexistent_gitleaks_override_target"))
+
+        ctx = AuditContext(
+            workspace_root=self.ws,
+            task_id="task-adv-01",
+            attempt=1,
+            touched_repos={"backend"},
+            all_registered_repos={"backend"},
+            base_commits={},
+            target_commits={},
+            declared_scope={},
+            claims={},
+        )
+        res = run_stage6_secrets(ctx)
+        self.assertTrue(any(d.defect_id == "secrets.unauthorized_scanner_config" for d in res.defects))
+        dangling_symlink.unlink()
+
+    def test_wave16_sec97_gate_engine_receipt_and_seal_atomic(self) -> None:
+        """[SEC-97] Gate engine writes receipts and seals with mode 0444 atomically via write_text_nofollow."""
+        from governance.core.gate_engine import _write_receipt_no_follow
+        p1_dir = self.ws / "evidence" / "tasks" / "task-adv-01" / "attempt_1" / "Phase-1"
+        p1_dir.mkdir(parents=True, exist_ok=True)
+        rcpt = p1_dir / "test_receipt.json"
+
+        _write_receipt_no_follow(self.ws, rcpt, '{"test": true}\n')
+        self.assertTrue(rcpt.is_file())
+        self.assertFalse(rcpt.is_symlink())
+        self.assertEqual(rcpt.stat().st_mode & 0o777, 0o444)
+        rcpt.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()

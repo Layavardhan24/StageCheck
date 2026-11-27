@@ -21,9 +21,10 @@ def run_stage6_secrets(ctx: AuditContext) -> StageResult:
         if not repo_dir.is_dir():
             continue
 
-        # 1. Tamper Defense: check for unauthorized local override configs (SEC-M1)
+        # 1. Tamper Defense: check for unauthorized local override configs (SEC-M1, SEC-96)
         for forbidden_cfg in [".gitleaks.toml", ".gitleaksignore"]:
-            if (repo_dir / forbidden_cfg).exists():
+            cfg_path = repo_dir / forbidden_cfg
+            if cfg_path.is_symlink() or cfg_path.exists():
                 defects.append(
                     Defect(
                         defect_id="secrets.unauthorized_scanner_config",

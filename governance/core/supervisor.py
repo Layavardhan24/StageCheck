@@ -468,7 +468,12 @@ class SupervisorEngine:
                         prompt_file = attempt_dir / "Phase-1" / "prompt.md"
                         scope_file = attempt_dir / "Phase-1" / "declared_scope.json"
 
-                        if not prompt_file.is_file() or not scope_file.is_file():
+                        if (
+                            not prompt_file.is_file()
+                            or prompt_file.is_symlink()
+                            or not scope_file.is_file()
+                            or scope_file.is_symlink()
+                        ):
                             return SupervisorStepResult(
                                 task_id=task,
                                 attempt=att,
@@ -517,7 +522,7 @@ class SupervisorEngine:
 
                     elif phase in ("PHASE_2A_CODING", "PHASE_2A_IMPLEMENTATION"):
                         status_file = attempt_dir / "Phase-2A" / "pre_commit_status.json"
-                        if not status_file.is_file():
+                        if not status_file.is_file() or status_file.is_symlink():
                             return SupervisorStepResult(
                                 task_id=task,
                                 attempt=att,
@@ -551,11 +556,16 @@ class SupervisorEngine:
                     elif phase in ("PHASE_2B_COMMITTING", "PHASE_2B_DELIVERY"):
                         report_file = attempt_dir / "Phase-2B" / "report.md"
                         claims_file = attempt_dir / "Phase-2B" / "claims.json"
-                        if not report_file.is_file() or not claims_file.is_file():
+                        if (
+                            not report_file.is_file()
+                            or report_file.is_symlink()
+                            or not claims_file.is_file()
+                            or claims_file.is_symlink()
+                        ):
                             missing = []
-                            if not report_file.is_file():
+                            if not report_file.is_file() or report_file.is_symlink():
                                 missing.append("Phase-2B/report.md")
-                            if not claims_file.is_file():
+                            if not claims_file.is_file() or claims_file.is_symlink():
                                 missing.append("Phase-2B/claims.json")
                             return SupervisorStepResult(
                                 task_id=task,
@@ -589,7 +599,7 @@ class SupervisorEngine:
 
                     elif phase in ("PHASE_3_AUDIT", "PHASE_3_AUDITING"):
                         verdict_file = attempt_dir / "Phase-3" / "verdict.json"
-                        if not verdict_file.is_file():
+                        if not verdict_file.is_file() or verdict_file.is_symlink():
                             should_run_audit = True
                             audit_task = task
                             audit_att = att

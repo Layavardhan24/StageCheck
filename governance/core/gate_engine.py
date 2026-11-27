@@ -732,7 +732,14 @@ def evaluate_gate_2b_criteria(
     # Load repo_baseline.json captured at task start if available (Spec 14 §3)
     baseline_file = attempt_dir / "repo_baseline.json"
     repo_baseline_data: Dict[str, Dict[str, Any]] = {}
-    if baseline_file.is_file():
+    if baseline_file.is_symlink():
+        criteria.append(GateCriterion(
+            criterion_id="gate2b.repo_baseline",
+            description="repo_baseline.json valid and safe",
+            status="FAILED",
+            message=f"repo_baseline.json at '{baseline_file}' is an insecure symbolic link",
+        ))
+    elif baseline_file.is_file():
         try:
             loaded_bl = load_json_file(baseline_file)
             if isinstance(loaded_bl, dict):

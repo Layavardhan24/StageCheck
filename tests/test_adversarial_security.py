@@ -1183,6 +1183,48 @@ class TestAdversarialSecurity(unittest.TestCase):
                     resp_dir.unlink()
                 resp_dir.mkdir(parents=True, exist_ok=True)
 
+    def test_wave18_sec105_topology_symlinked_baseline(self) -> None:
+        """[SEC-105] TopologyWorktreeManager rejects symlinked repo_baseline.json."""
+        from governance.core.topology import TopologyWorktreeManager, WorktreeSetupError
+
+        att_dir = self.ws / "evidence" / "tasks" / "task-adv-01" / "attempt_1"
+        att_dir.mkdir(parents=True, exist_ok=True)
+        bl_file = att_dir / "repo_baseline.json"
+        if bl_file.exists() or bl_file.is_symlink():
+            bl_file.unlink()
+        bl_file.symlink_to(Path("/tmp/nonexistent_baseline_target"))
+
+        manager = TopologyWorktreeManager(
+            workspace_root=self.ws,
+            task_id="task-adv-01",
+            attempt_index=1,
+            enforce_clean_baseline=False,
+        )
+        try:
+            with self.assertRaises(WorktreeSetupError):
+                manager.setup()
+        finally:
+            if bl_file.is_symlink():
+                bl_file.unlink()
+
+    def test_wave18_sec106_gate_engine_symlinked_baseline(self) -> None:
+        """[SEC-106] Gate 2B evaluation rejects symlinked repo_baseline.json."""
+        from governance.core.gate_engine import check_gate_preconditions, GateId
+
+        att_dir = self.ws / "evidence" / "tasks" / "task-adv-01" / "attempt_1"
+        att_dir.mkdir(parents=True, exist_ok=True)
+        bl_file = att_dir / "repo_baseline.json"
+        if bl_file.exists() or bl_file.is_symlink():
+            bl_file.unlink()
+        bl_file.symlink_to(Path("/tmp/nonexistent_baseline_target"))
+
+        try:
+            rep = check_gate_preconditions(self.ws, GateId.GATE_2B, "task-adv-01", 1)
+            self.assertTrue(any(c.criterion_id == "gate2b.repo_baseline" and c.status == "FAILED" for c in rep.criteria))
+        finally:
+            if bl_file.is_symlink():
+                bl_file.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()

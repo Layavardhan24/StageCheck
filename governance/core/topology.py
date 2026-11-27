@@ -203,6 +203,10 @@ class TopologyWorktreeManager:
                 attempt_dir = resolve_task_attempt_dir(self.workspace_root, self.task_id, self.attempt_index)
                 baseline_file = attempt_dir / "repo_baseline.json"
                 task_baseline_head = None
+                if baseline_file.is_symlink():
+                    raise WorktreeSetupError(
+                        f"Security policy violation: repo_baseline.json at '{baseline_file}' is an insecure symbolic link."
+                    )
                 if baseline_file.is_file():
                     try:
                         bl_data = load_json_file(baseline_file)

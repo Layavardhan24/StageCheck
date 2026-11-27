@@ -179,7 +179,7 @@ def compute_turn_status(
         status_file = p2a_dir / "pre_commit_status.json"
         review_file = p2a_dir / "pre_commit_review.json"
 
-        if not status_file.is_file():
+        if not status_file.is_file() or status_file.is_symlink():
             active_turn = "AGENT_2"
             waiting_for = "Phase-2A/pre_commit_status.json"
             instructions = "Agent 2 must implement solution and submit Phase-2A/pre_commit_status.json (status: AWAITING_REVIEW)."
@@ -192,7 +192,7 @@ def compute_turn_status(
             except Exception:
                 cycle = 1
 
-            if not review_file.is_file():
+            if not review_file.is_file() or review_file.is_symlink():
                 active_turn = "AGENT_1"
                 waiting_for = "Phase-2A/pre_commit_review.json"
                 instructions = "Agent 1 must review uncommitted diff against rubric/taxonomies and write Phase-2A/pre_commit_review.json."
@@ -208,8 +208,8 @@ def compute_turn_status(
                     rev_cycle = 0
 
                 if rev_val == "REVISION_REQUIRED":
-                    status_mtime = status_file.stat().st_mtime
-                    review_mtime = review_file.stat().st_mtime
+                    status_mtime = status_file.lstat().st_mtime
+                    review_mtime = review_file.lstat().st_mtime
                     # Agent 1 takes turn if cycle was incremented (cycle > rev_cycle)
                     # OR if Agent 2 submitted an update (status_mtime > review_mtime with status AWAITING_REVIEW)
                     if cycle > rev_cycle or (status_mtime > review_mtime and st_val == "AWAITING_REVIEW"):

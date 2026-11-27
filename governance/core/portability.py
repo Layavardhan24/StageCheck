@@ -13,7 +13,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from governance.core.paths import read_bytes_nofollow
+from governance.core.paths import StageCheckPathError, read_bytes_nofollow, safe_resolve
 from governance.core.permissions import _safe_chmod
 
 # Prohibited personal or host-specific path patterns
@@ -73,7 +73,7 @@ def audit_portability(
                 continue
 
             try:
-                from governance.core.paths import read_bytes_nofollow
+                from governance.core.paths import StageCheckPathError, read_bytes_nofollow, safe_resolve
                 content = read_bytes_nofollow(fpath, max_bytes=10 * 1024 * 1024).decode("utf-8", errors="ignore")
                 for line_num, line in enumerate(content.splitlines(), 1):
                     for pattern, description in PROHIBITED_PATTERNS:
@@ -264,11 +264,10 @@ def extract_zip_preserving_modes(
         for info in zf.infolist():
             if info.is_dir():
                 continue
-            target = (dest / info.filename).resolve()
             try:
-                target.relative_to(dest)
-            except ValueError:
-                raise PermissionError(f"Archive entry '{info.filename}' attempts path traversal outside destination.")
+                target = safe_resolve(info.filename, dest, allow_symlinks=False)
+            except (StageCheckPathError, ValueError) as err:
+                raise PermissionError(f"Archive entry '{info.filename}' attempts path traversal or symlink escape outside destination: {err}") from err
             target.parent.mkdir(parents=True, exist_ok=True)
             if target.is_symlink():
                 raise PermissionError(f"Refusing to extract into symbolic link target '{target}'.")

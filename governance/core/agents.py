@@ -243,7 +243,12 @@ def resolve_agent_response_dir(
         raise InvalidAgentSlugError(str(err)) from err
 
     root = Path(workspace_root).resolve()
-    responses_root = (root / "evidence" / "responses").resolve()
+    evidence_dir = root / "evidence"
+    if evidence_dir.is_symlink():
+        raise SecurityPathEscapeError(f"Security violation: Evidence directory '{evidence_dir}' is a symbolic link.")
+    responses_root = (evidence_dir / "responses").resolve()
+    if (evidence_dir / "responses").is_symlink():
+        raise SecurityPathEscapeError("Security violation: Evidence responses directory is a symbolic link.")
     target_dir = (responses_root / norm_slug).resolve()
 
     if not is_path_contained(target_dir, responses_root):

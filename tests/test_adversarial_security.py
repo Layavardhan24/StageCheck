@@ -1092,6 +1092,97 @@ class TestAdversarialSecurity(unittest.TestCase):
         self.assertEqual(rcpt.stat().st_mode & 0o777, 0o444)
         rcpt.unlink()
 
+    def test_wave17_sec100_stage8_qual_root_symlink(self) -> None:
+        """[SEC-100] Stage 8 rerun catches symlinked controls/QUALIFICATION_ROOT.json without escaping."""
+        from governance.checks.base import AuditContext
+        from governance.checks.stage8_rerun import run_stage8_rerun
+        from governance.core.permissions import controlled_write_transaction
+
+        qual_file = self.ws / "controls" / "QUALIFICATION_ROOT.json"
+        has_orig = qual_file.exists()
+        orig_content = qual_file.read_text() if has_orig else None
+
+        with controlled_write_transaction(self.ws / "controls"):
+            if qual_file.exists() or qual_file.is_symlink():
+                qual_file.unlink()
+            qual_file.symlink_to(Path("/tmp/nonexistent_qual_target"))
+
+        try:
+            ctx = AuditContext(
+                workspace_root=self.ws,
+                task_id="task-adv-01",
+                attempt=1,
+                touched_repos={"backend"},
+                all_registered_repos={"backend"},
+                base_commits={},
+                target_commits={},
+                declared_scope={},
+                claims={"claims": [{"citations": [{"type": "command", "argv": ["pytest"], "cwd": "repos/backend"}]}]},
+            )
+            res = run_stage8_rerun(ctx)
+            self.assertTrue(any(d.defect_id == "rerun.unsafe_qualification_root" for d in res.defects))
+        finally:
+            with controlled_write_transaction(self.ws / "controls"):
+                if qual_file.is_symlink() or qual_file.exists():
+                    qual_file.unlink()
+                if has_orig and orig_content is not None:
+                    qual_file.write_text(orig_content)
+
+    def test_wave17_sec101_portability_intermediate_symlink(self) -> None:
+        """[SEC-101] Portability zip extraction rejects intermediate symlinks."""
+        import io
+        import zipfile
+        from governance.core.portability import extract_zip_preserving_modes
+
+        dest_dir = self.ws / "extracted_test"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create symlinked intermediate folder inside dest
+        (dest_dir / "symlink_dir").symlink_to(self.ws / "controls")
+
+        # Create in-memory zip with entry traversing through symlink_dir
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w") as zf:
+            zf.writestr("symlink_dir/tamper.txt", "malicious_payload")
+
+        zip_path = self.ws / "test_exploit.zip"
+        zip_path.write_bytes(zip_buf.getvalue())
+
+        try:
+            with self.assertRaises(PermissionError):
+                extract_zip_preserving_modes(zip_path, dest_dir)
+        finally:
+            if zip_path.exists():
+                zip_path.unlink()
+            if (dest_dir / "symlink_dir").is_symlink():
+                (dest_dir / "symlink_dir").unlink()
+            import shutil
+            shutil.rmtree(dest_dir, ignore_errors=True)
+
+    def test_wave17_sec103_agent_response_dir_symlink(self) -> None:
+        """[SEC-103] resolve_agent_response_dir rejects symlinked evidence or responses dir."""
+        from governance.core.agents import SecurityPathEscapeError, resolve_agent_response_dir
+        from governance.core.permissions import controlled_write_transaction
+
+        ev_dir = self.ws / "evidence"
+        resp_dir = ev_dir / "responses"
+
+        # Temporarily create a symlink for responses under write transaction
+        with controlled_write_transaction(ev_dir):
+            if resp_dir.exists():
+                import shutil
+                shutil.rmtree(resp_dir)
+            resp_dir.symlink_to(Path("/tmp"))
+
+        try:
+            with self.assertRaises(SecurityPathEscapeError):
+                resolve_agent_response_dir(self.ws, "agent-1", ensure_exists=True)
+        finally:
+            with controlled_write_transaction(ev_dir):
+                if resp_dir.is_symlink():
+                    resp_dir.unlink()
+                resp_dir.mkdir(parents=True, exist_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()

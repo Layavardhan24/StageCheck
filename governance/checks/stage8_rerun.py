@@ -19,6 +19,7 @@ from governance.core.commands import (
     capture_git_status_porcelain,
     execute_secure_command,
 )
+from governance.core.paths import StageCheckPathError, safe_resolve
 from governance.core.topology import managed_topology_worktrees
 
 
@@ -107,20 +108,57 @@ def run_stage8_rerun(ctx: AuditContext) -> StageResult:
             )
             continue
 
-        work_dir = (ctx.workspace_root / rel_cwd).resolve()
-        # Security: verify work_dir resides strictly inside a repository under repos/ or authorized qualification root
-        repos_root = (ctx.workspace_root / "repos").resolve()
         qual_root_rel = "evals"
         qual_config_path = ctx.workspace_root / "controls" / "QUALIFICATION_ROOT.json"
-        if qual_config_path.is_file() and not qual_config_path.is_symlink():
+        if qual_config_path.is_symlink():
+            defects.append(
+                Defect(
+                    defect_id="rerun.unsafe_qualification_root",
+                    message=f"controls/QUALIFICATION_ROOT.json is an insecure symbolic link: '{qual_config_path}'",
+                    stage=stage_id,
+                    severity="CRITICAL",
+                    blocking=True,
+                )
+            )
+            continue
+        elif qual_config_path.is_file():
             try:
                 from governance.core.utils import load_json_file
                 qual_data = load_json_file(qual_config_path)
                 qual_root_rel = qual_data.get("qualification_root", "evals")
             except Exception:
                 pass
-        qual_root = (ctx.workspace_root / qual_root_rel).resolve()
 
+        try:
+            qual_root = safe_resolve(qual_root_rel, ctx.workspace_root, allow_symlinks=False)
+        except (StageCheckPathError, ValueError):
+            defects.append(
+                Defect(
+                    defect_id="rerun.unsafe_qualification_root",
+                    message=f"Configured qualification_root '{qual_root_rel}' escapes workspace boundary or contains invalid symlinks.",
+                    stage=stage_id,
+                    severity="CRITICAL",
+                    blocking=True,
+                )
+            )
+            continue
+
+        try:
+            work_dir = safe_resolve(rel_cwd, ctx.workspace_root, allow_symlinks=False)
+        except (StageCheckPathError, ValueError):
+            defects.append(
+                Defect(
+                    defect_id="rerun.working_directory_escaped",
+                    message=f"Cited command working directory '{rel_cwd}' escapes workspace boundary or contains invalid symlinks.",
+                    stage=stage_id,
+                    severity="CRITICAL",
+                    blocking=True,
+                )
+            )
+            continue
+
+        # Security: verify work_dir resides strictly inside a repository under repos/ or authorized qualification root
+        repos_root = (ctx.workspace_root / "repos").resolve()
         is_in_repo = work_dir.is_relative_to(repos_root) and work_dir != repos_root
         is_in_qual = (work_dir == qual_root or work_dir.is_relative_to(qual_root)) and qual_root.is_dir()
 
@@ -177,7 +215,7 @@ def run_stage8_rerun(ctx: AuditContext) -> StageResult:
             matched_repo = None
             for repo_name in ctx.touched_repos:
                 candidate = ctx.workspace_root / "repos" / repo_name
-                if candidate.is_dir() and work_dir.is_relative_to(candidate.resolve()):
+                if candidate.is_dir() and not candidate.is_symlink() and work_dir.is_relative_to(candidate.resolve()):
                     matched_repo = (repo_name, candidate)
                     break
             if not matched_repo and (ctx.workspace_root / ".git").is_dir():

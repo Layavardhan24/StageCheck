@@ -315,11 +315,7 @@ def create_task_seal(
                 raise EvidenceTamperError(f"Refusing to follow symlinked Phase-3 seal '{p3_seal}'.")
             if p3_seal.exists():
                 _safe_chmod(p3_seal, 0o644)
-            p3_fd = os.open(p3_seal, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-            try:
-                os.write(p3_fd, pretty_json_dumps(seal_data).encode("utf-8"))
-            finally:
-                os.close(p3_fd)
+            write_text_nofollow(p3_seal, pretty_json_dumps(seal_data) + "\n", mode=0o644)
             _safe_chmod(p3_seal, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         except OSError:
             pass
@@ -334,11 +330,7 @@ def create_task_seal(
             raise EvidenceTamperError(f"Refusing to follow symlinked master seal '{master_seal}'.")
         if master_seal.exists():
             _safe_chmod(master_seal, 0o644)
-        m_fd = os.open(master_seal, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-        try:
-            os.write(m_fd, pretty_json_dumps(seal_data).encode("utf-8"))
-        finally:
-            os.close(m_fd)
+        write_text_nofollow(master_seal, pretty_json_dumps(seal_data) + "\n", mode=0o644)
 
     # Update EVIDENCE_MANIFEST with the new seal and verdict files
     files_to_index = [seal_path]

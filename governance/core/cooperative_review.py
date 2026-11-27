@@ -46,7 +46,9 @@ def resolve_governed_repo_path(root: Path, repo_name: str) -> Path:
         raise ReviewGateError(f"Invalid repository name '{repo_name}'.")
 
     prod_repos_file = root / "controls" / "PRODUCT_REPOSITORIES.json"
-    if prod_repos_file.is_file() and not prod_repos_file.is_symlink():
+    if prod_repos_file.is_symlink():
+        raise ReviewGateError(f"Security violation: controls/PRODUCT_REPOSITORIES.json is a symbolic link: '{prod_repos_file}'.")
+    if prod_repos_file.is_file():
         try:
             p_data = load_json_file(prod_repos_file)
         except Exception as err:
@@ -199,7 +201,9 @@ def verify_precommit_scope(
     if not touched_repos:
         # Read-only / evidence-only task: verify all registered repositories are clean
         prod_repos_file = root / "controls" / "PRODUCT_REPOSITORIES.json"
-        if prod_repos_file.is_file():
+        if prod_repos_file.is_symlink():
+            violations.append(f"Security violation: controls/PRODUCT_REPOSITORIES.json is a symbolic link: '{prod_repos_file}'.")
+        elif prod_repos_file.is_file():
             try:
                 prod_data = load_json_file(prod_repos_file)
                 for reg_name in (prod_data.get("repositories") or {}):
@@ -554,7 +558,9 @@ def record_pre_commit_review(
     }
 
     existing_review_file = phase2a_dir / "pre_commit_review.json"
-    if existing_review_file.is_file() and not existing_review_file.is_symlink():
+    if existing_review_file.is_symlink():
+        raise ReviewGateError(f"Security violation: Pre-commit review file is a symbolic link: '{existing_review_file}'.")
+    if existing_review_file.is_file():
         try:
             existing_rev = load_json_file(existing_review_file)
             if isinstance(existing_rev, dict) and isinstance(existing_rev.get("agent_assisted_reviews"), dict):

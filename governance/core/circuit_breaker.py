@@ -91,7 +91,11 @@ def _detect_timeout_masking(workspace_root: Path, task_id: str, attempt: int) ->
         return False
 
     for repo_name, meta in repo_meta.items():
-        repo_dir = workspace_root / meta.get("path", f"repos/{repo_name}")
+        try:
+            from governance.core.cooperative_review import resolve_governed_repo_path
+            repo_dir = resolve_governed_repo_path(workspace_root, repo_name)
+        except Exception:
+            continue
         if not (repo_dir / ".git").is_dir():
             continue
 

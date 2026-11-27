@@ -37,6 +37,7 @@ from governance.core.paths import (
     SymlinkPathEscapeError,
     read_bytes_nofollow,
     validate_attempt_root_symlinks,
+    write_text_nofollow,
 )
 from governance.core.permissions import (
     _safe_chmod,
@@ -257,12 +258,8 @@ def compute_attempt_merkle_seal(
         if seal_file.exists():
             _safe_chmod(seal_file, 0o644)
 
-        seal_bytes = (json.dumps(seal_record, indent=2, sort_keys=True) + "\n").encode("utf-8")
-        out_fd = os.open(seal_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
-        try:
-            os.write(out_fd, seal_bytes)
-        finally:
-            os.close(out_fd)
+        seal_text = json.dumps(seal_record, indent=2, sort_keys=True) + "\n"
+        write_text_nofollow(seal_file, seal_text, mode=0o644)
         _safe_chmod(seal_file, 0o444)
 
     return seal_record

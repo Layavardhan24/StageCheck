@@ -743,7 +743,14 @@ def evaluate_gate_2b_criteria(
     repos_to_check: Dict[str, Path] = {}
     baseline_heads: Dict[str, str] = {}
     prod_repos_file = workspace_root / "controls" / "PRODUCT_REPOSITORIES.json"
-    if prod_repos_file.is_file():
+    if prod_repos_file.is_symlink():
+        criteria.append(GateCriterion(
+            criterion_id="gate2b.repositories_registry",
+            description="PRODUCT_REPOSITORIES.json valid and safe",
+            status="FAILED",
+            message=f"controls/PRODUCT_REPOSITORIES.json is an insecure symbolic link: '{prod_repos_file}'",
+        ))
+    elif prod_repos_file.is_file():
         try:
             prod_data = load_json_file(prod_repos_file)
             for repo_name, meta in prod_data.get("repositories", {}).items():

@@ -58,16 +58,11 @@ def resolve_owner_email(workspace_root: Optional[Path | str] = None) -> str:
 
 
 def render_default_owner_grants_md(workspace_root: Optional[Path | str] = None) -> str:
-    """Render default OWNER_GRANTS.md with resolved owner email and developer fallback."""
+    """Render default OWNER_GRANTS.md with resolved owner email (or fallback default)."""
     owner_email = resolve_owner_email(workspace_root)
-    lines = [
+    identities_block = (
         f"* Authorized owner: `{owner_email}` (roles: OWNER; permissions: WAIVER_APPROVE, WAIVER_REVOKE, GATE_OVERRIDE, CIRCUIT_BREAKER_RESET)"
-    ]
-    if owner_email != DEFAULT_OWNER_EMAIL:
-        lines.append(
-            f"* Authorized owner: `{DEFAULT_OWNER_EMAIL}` (roles: OWNER; permissions: WAIVER_APPROVE, WAIVER_REVOKE, GATE_OVERRIDE, CIRCUIT_BREAKER_RESET)"
-        )
-    identities_block = "\n".join(lines)
+    )
     return f"""# Human Owner Authorization Grants & Privileged Commands
 
 This document records explicit, human-authorized exemptions, privileged commands,

@@ -357,11 +357,16 @@ class TestAtomicScaffolding(unittest.TestCase):
         tmp_ws = Path("/tmp/scratch/workspace")
         self.assertEqual(resolve_owner_email(tmp_ws), "developer@dharitri.org")
 
-        # 3. Rendered content contains resolved email and default fallback, and no owner@stagecheck.local
+        # 3. Rendered content contains only the single resolved email or fallback, never both, and no owner@stagecheck.local
         rendered = render_default_owner_grants_md(home_user_ws)
         self.assertIn("laya@dharitri.org", rendered)
-        self.assertIn("developer@dharitri.org", rendered)
+        self.assertNotIn("developer@dharitri.org", rendered)
         self.assertNotIn("owner@stagecheck.local", rendered)
+
+        rendered_default = render_default_owner_grants_md(tmp_ws)
+        self.assertIn("developer@dharitri.org", rendered_default)
+        self.assertNotIn("laya@dharitri.org", rendered_default)
+        self.assertNotIn("owner@stagecheck.local", rendered_default)
 
 
 if __name__ == "__main__":
